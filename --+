@@ -1,155 +1,113 @@
-
-
+--// SERVICES
 local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
-local TP = game:GetService("TeleportService")
-local VIM = game:GetService("VirtualInputManager")
-local LP = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
 
---// State
-getgenv().Target = nil
-getgenv().Weapon = nil
-getgenv().Running = true
+--// GLOBALS
+getgenv().targ = nil
+getgenv().Hunting = false
+getgenv().BountyEarned = 0
+local StartTime = os.time()
 
--------------------------------------------------
--- TEAM JOIN
--------------------------------------------------
+--// SAFE ZONE CHECK
+local SafeZones
 pcall(function()
-    if LP.Team and LP.Team.Name ~= getgenv().config.Team then
-        RS.Remotes.CommF_:InvokeServer("SetTeam", getgenv().config.Team)
+    SafeZones = workspace._WorldOrigin.SafeZones
+end)
+
+local function IsInSafeZone(char)
+    if not SafeZones or not char or not char:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+
+    for _, zone in pairs(SafeZones:GetChildren()) do
+        if zone:IsA("BasePart") then
+            if (zone.Position - char.HumanoidRootPart.Position).Magnitude < 350 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+--// SKIP TARGET
+function skipTarget()
+    getgenv().targ = nil
+    getgenv().Hunting = false
+    task.wait(0.3)
+    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+end
+
+--// ANTI SAFEZONE LOOP
+task.spawn(function()
+    while task.wait(1) do
+        if getgenv().targ and getgenv().targ.Character then
+            local char = getgenv().targ.Character
+
+            -- SafeZone detected
+            if IsInSafeZone(char) then
+                skipTarget()
+            end
+
+            -- PvP disabled
+            local gui = lp.PlayerGui:FindFirstChild("Main")
+            if gui and gui:FindFirstChild("PvpDisabled") and gui.PvpDisabled.Visible then
+                skipTarget()
+            end
+        end
     end
 end)
 
--------------------------------------------------
--- UTILITIES
--------------------------------------------------
-local function to(cf)
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        LP.Character.HumanoidRootPart.CFrame = cf
-    end
+--// GUI
+local GUI = Instance.new("ScreenGui")
+GUI.Name = "SCP_HUB_INFO"
+GUI.Parent = lp.PlayerGui
+
+local Frame = Instance.new("Frame", GUI)
+Frame.Size = UDim2.new(0, 330, 0, 190)
+Frame.Position = UDim2.new(0.02, 0, 0.35, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+local function makeLabel(text, y, size, color)
+    local l = Instance.new("TextLabel", Frame)
+    l.Size = UDim2.new(1, -20, 0, size)
+    l.Position = UDim2.new(0, 10, 0, y)
+    l.BackgroundTransparency = 1
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = size - 4
+    l.TextColor3 = color
+    l.Text = text
+    return l
 end
 
-local function press(key, hold)
-    VIM:SendKeyEvent(true, key, false, game)
-    task.wait(hold or 0)
-    VIM:SendKeyEvent(false, key, false, game)
-end
+local Title = makeLabel(" SCP HUB | AUTO BOUNTY", 12, 30, Color3.fromRGB(255,170,0))
+local TargetLabel = makeLabel("Target : None", 55, 24, Color3.fromRGB(230,230,230))
+local BountyLabel = makeLabel("Bounty Earned : 0", 85, 24, Color3.fromRGB(0,255,150))
+local TimeLabel = makeLabel("Time Hunting : 0s", 115, 24, Color3.fromRGB(180,180,180))
+local StatusLabel = makeLabel("Status : Searching...", 145, 22, Color3.fromRGB(255,100,100))
 
-local function equip(toolType)
-    local char = LP.Character
-    if not char then return end
-
-    for _,v in pairs(LP.Backpack:GetChildren()) do
-        if v:IsA("Tool") and v.ToolTip == toolType then
-            char.Humanoid:EquipTool(v)
-            return v
-        end
-    end
-end
-
--------------------------------------------------
--- TARGET FINDER
--------------------------------------------------
-local function validTarget(plr)
-    if plr == LP then return false end
-    if not plr.Character then return false end
-    if not plr.Character:FindFirstChild("HumanoidRootPart") then return false end
-    if plr.Character.Humanoid.Health <= 0 then return false end
-
-    local bounty = plr.leaderstats and plr.leaderstats["Bounty/Honor"]
-    if not bounty then return false end
-
-    if bounty.Value < getgenv().config.MinBountyHunt then return false end
-    if bounty.Value > getgenv().config.MaxBountyHunt then return false end
-
-    return true
-end
-
-local function findTarget()
-    for _,plr in pairs(Players:GetPlayers()) do
-        if validTarget(plr) then
-            return plr
-        end
-    end
-end
-
--------------------------------------------------
--- COMBAT ENGINE
--------------------------------------------------
-local function useSkills(toolType)
-    local cfg = getgenv().config.MainSkillToggle[toolType]
-    if not cfg or not cfg.Enable then return end
-
-    equip(toolType)
-    task.wait(0.2)
-
-    for key,data in pairs(cfg.Skills) do
-        if data.Enable then
-            press(key, data.HoldTime)
-            task.wait(cfg.Delay)
-        end
-    end
-end
-
-local function fightTarget()
-    local targ = getgenv().Target
-    if not targ or not targ.Character then return end
-
-    local hrp = targ.Character.HumanoidRootPart
-    to(hrp.CFrame * CFrame.new(0,3,4))
-
-    if getgenv().config["Use Race"].V3 then press("T") end
-    if getgenv().config["Use Race"].V4 then press("Y") end
-
-    for tool,_ in pairs(getgenv().config.MainSkillToggle) do
-        useSkills(tool)
-    end
-end
-
--------------------------------------------------
--- SERVER HOP
--------------------------------------------------
-local function hop()
-    TP:Teleport(game.PlaceId)
-end
-
--------------------------------------------------
--- INFO SCREEN (MINIMAL)
--------------------------------------------------
-if getgenv().config["Info Screen"] then
-    local gui = Instance.new("ScreenGui", LP.PlayerGui)
-    local label = Instance.new("TextLabel", gui)
-    label.Size = UDim2.fromScale(0.3,0.05)
-    label.Position = UDim2.fromScale(0.35,0.05)
-    label.TextScaled = true
-    label.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Text = "SCP HUB BOUNTY HUNT"
-
-    task.spawn(function()
-        while task.wait(1) do
-            if getgenv().Target then
-                label.Text = "Target: "..getgenv().Target.Name
-            else
-                label.Text = "Searching Target..."
-            end
-        end
-    end)
-end
-
--------------------------------------------------
--- MAIN LOOP
--------------------------------------------------
+--// GUI UPDATE LOOP
 task.spawn(function()
-    while getgenv().Running do
-        if not getgenv().Target then
-            getgenv().Target = findTarget()
-            if not getgenv().Target then
-                hop()
-            end
-        else
-            fightTarget()
-        end
-        task.wait(0.2)
+    while task.wait(1) do
+        TargetLabel.Text = "Target : " .. (getgenv().targ and getgenv().targ.Name or "None")
+        BountyLabel.Text = "Bounty Earned : " .. tostring(getgenv().BountyEarned)
+        TimeLabel.Text = "Time Hunting : " .. (os.time() - StartTime) .. "s"
+        StatusLabel.Text = getgenv().Hunting and "Status : Fighting" or "Status : Searching..."
     end
+end)
+
+local OldBounty = lp.leaderstats.Bounty.Value
+lp.leaderstats.Bounty:GetPropertyChangedSignal("Value"):Connect(function()
+    local New = lp.leaderstats.Bounty.Value
+    if New > OldBounty then
+        getgenv().BountyEarned += (New - OldBounty)
+    end
+    OldBounty = New
 end)
