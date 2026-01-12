@@ -1,0 +1,155 @@
+
+
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local TP = game:GetService("TeleportService")
+local VIM = game:GetService("VirtualInputManager")
+local LP = Players.LocalPlayer
+
+--// State
+getgenv().Target = nil
+getgenv().Weapon = nil
+getgenv().Running = true
+
+-------------------------------------------------
+-- TEAM JOIN
+-------------------------------------------------
+pcall(function()
+    if LP.Team and LP.Team.Name ~= getgenv().config.Team then
+        RS.Remotes.CommF_:InvokeServer("SetTeam", getgenv().config.Team)
+    end
+end)
+
+-------------------------------------------------
+-- UTILITIES
+-------------------------------------------------
+local function to(cf)
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        LP.Character.HumanoidRootPart.CFrame = cf
+    end
+end
+
+local function press(key, hold)
+    VIM:SendKeyEvent(true, key, false, game)
+    task.wait(hold or 0)
+    VIM:SendKeyEvent(false, key, false, game)
+end
+
+local function equip(toolType)
+    local char = LP.Character
+    if not char then return end
+
+    for _,v in pairs(LP.Backpack:GetChildren()) do
+        if v:IsA("Tool") and v.ToolTip == toolType then
+            char.Humanoid:EquipTool(v)
+            return v
+        end
+    end
+end
+
+-------------------------------------------------
+-- TARGET FINDER
+-------------------------------------------------
+local function validTarget(plr)
+    if plr == LP then return false end
+    if not plr.Character then return false end
+    if not plr.Character:FindFirstChild("HumanoidRootPart") then return false end
+    if plr.Character.Humanoid.Health <= 0 then return false end
+
+    local bounty = plr.leaderstats and plr.leaderstats["Bounty/Honor"]
+    if not bounty then return false end
+
+    if bounty.Value < getgenv().config.MinBountyHunt then return false end
+    if bounty.Value > getgenv().config.MaxBountyHunt then return false end
+
+    return true
+end
+
+local function findTarget()
+    for _,plr in pairs(Players:GetPlayers()) do
+        if validTarget(plr) then
+            return plr
+        end
+    end
+end
+
+-------------------------------------------------
+-- COMBAT ENGINE
+-------------------------------------------------
+local function useSkills(toolType)
+    local cfg = getgenv().config.MainSkillToggle[toolType]
+    if not cfg or not cfg.Enable then return end
+
+    equip(toolType)
+    task.wait(0.2)
+
+    for key,data in pairs(cfg.Skills) do
+        if data.Enable then
+            press(key, data.HoldTime)
+            task.wait(cfg.Delay)
+        end
+    end
+end
+
+local function fightTarget()
+    local targ = getgenv().Target
+    if not targ or not targ.Character then return end
+
+    local hrp = targ.Character.HumanoidRootPart
+    to(hrp.CFrame * CFrame.new(0,3,4))
+
+    if getgenv().config["Use Race"].V3 then press("T") end
+    if getgenv().config["Use Race"].V4 then press("Y") end
+
+    for tool,_ in pairs(getgenv().config.MainSkillToggle) do
+        useSkills(tool)
+    end
+end
+
+-------------------------------------------------
+-- SERVER HOP
+-------------------------------------------------
+local function hop()
+    TP:Teleport(game.PlaceId)
+end
+
+-------------------------------------------------
+-- INFO SCREEN (MINIMAL)
+-------------------------------------------------
+if getgenv().config["Info Screen"] then
+    local gui = Instance.new("ScreenGui", LP.PlayerGui)
+    local label = Instance.new("TextLabel", gui)
+    label.Size = UDim2.fromScale(0.3,0.05)
+    label.Position = UDim2.fromScale(0.35,0.05)
+    label.TextScaled = true
+    label.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Text = "SCP HUB BOUNTY HUNT"
+
+    task.spawn(function()
+        while task.wait(1) do
+            if getgenv().Target then
+                label.Text = "Target: "..getgenv().Target.Name
+            else
+                label.Text = "Searching Target..."
+            end
+        end
+    end)
+end
+
+-------------------------------------------------
+-- MAIN LOOP
+-------------------------------------------------
+task.spawn(function()
+    while getgenv().Running do
+        if not getgenv().Target then
+            getgenv().Target = findTarget()
+            if not getgenv().Target then
+                hop()
+            end
+        else
+            fightTarget()
+        end
+        task.wait(0.2)
+    end
+end)
