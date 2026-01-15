@@ -1,149 +1,160 @@
 
 if not getgenv().config then
-    warn("Config not found. Load config.lua first.")
+    warn("Config missing")
     return
 end
 
 local cfg = getgenv().config
 
+-- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+-- =====================================================
+-- GUI
+-- =====================================================
 
-
-local gui = Instance.new("ScreenGui")
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 gui.Name = "SCP_HUB"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local bg = Instance.new("Frame")
-bg.Parent = gui
-bg.Size = UDim2.fromScale(1, 1)
-bg.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+local bg = Instance.new("Frame", gui)
+bg.Size = UDim2.fromScale(1,1)
+bg.BackgroundColor3 = Color3.fromRGB(10,10,10)
 bg.BackgroundTransparency = 0.25
 bg.BorderSizePixel = 0
 
--- TITLE
-local title = Instance.new("TextLabel")
-title.Parent = bg
-title.Size = UDim2.new(1, 0, 0, 90)
-title.Position = UDim2.new(0, 0, 0, 25)
+local title = Instance.new("TextLabel", bg)
+title.Size = UDim2.new(1,0,0,80)
+title.Position = UDim2.new(0,0,0,20)
 title.BackgroundTransparency = 1
 title.Text = "SCP HUB  -  AUTO BOUNTY HUNT"
-title.TextColor3 = Color3.fromRGB(255, 50, 50)
-title.TextScaled = true
 title.Font = Enum.Font.GothamBlack
+title.TextColor3 = Color3.fromRGB(255,50,50)
+title.TextScaled = true
 
--- TARGET
-local targetLabel = Instance.new("TextLabel")
-targetLabel.Parent = bg
-targetLabel.Size = UDim2.new(1, 0, 0, 70)
-targetLabel.Position = UDim2.new(0, 0, 0.30, 0)
+local targetLabel = Instance.new("TextLabel", bg)
+targetLabel.Size = UDim2.new(1,0,0,60)
+targetLabel.Position = UDim2.new(0,0,0.30,0)
 targetLabel.BackgroundTransparency = 1
-targetLabel.Text = "TARGET : NONE"
-targetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-targetLabel.TextScaled = true
 targetLabel.Font = Enum.Font.GothamBold
+targetLabel.TextColor3 = Color3.fromRGB(255,255,255)
+targetLabel.TextScaled = true
+targetLabel.Text = "TARGET : NONE"
 
--- BOUNTY
-local bountyLabel = Instance.new("TextLabel")
-bountyLabel.Parent = bg
-bountyLabel.Size = UDim2.new(1, 0, 0, 70)
-bountyLabel.Position = UDim2.new(0, 0, 0.40, 0)
+local bountyLabel = Instance.new("TextLabel", bg)
+bountyLabel.Size = UDim2.new(1,0,0,60)
+bountyLabel.Position = UDim2.new(0,0,0.40,0)
 bountyLabel.BackgroundTransparency = 1
-bountyLabel.Text = "CURRENT BOUNTY : 0"
-bountyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-bountyLabel.TextScaled = true
 bountyLabel.Font = Enum.Font.GothamBold
+bountyLabel.TextColor3 = Color3.fromRGB(255,255,255)
+bountyLabel.TextScaled = true
+bountyLabel.Text = "CURRENT BOUNTY : 0"
 
+-- =====================================================
+-- AUTO UPDATE BOUNTY (REAL LOGIC)
+-- =====================================================
 
-
-getgenv().SCP_UI = {
-    SetTarget = function(name)
-        targetLabel.Text = "TARGET : " .. tostring(name)
-    end,
-
-    SetBounty = function(amount)
-        bountyLabel.Text = "CURRENT BOUNTY : " .. tostring(amount)
+local function updateBounty()
+    local stats = LocalPlayer:FindFirstChild("leaderstats")
+    local bounty = stats and stats:FindFirstChild("Bounty")
+    if bounty then
+        bountyLabel.Text = "CURRENT BOUNTY : " .. bounty.Value
     end
-}
+end
 
+if LocalPlayer:FindFirstChild("leaderstats") then
+    updateBounty()
+    LocalPlayer.leaderstats.ChildAdded:Connect(updateBounty)
+    LocalPlayer.leaderstats.ChildRemoved:Connect(updateBounty)
+end
 
+-- =====================================================
+-- AUTO TARGET DETECTION (SAFE)
+-- =====================================================
+-- Reads common globals if AutoBounty exposes them
+
+task.spawn(function()
+    while task.wait(1) do
+        local target =
+            getgenv().CurrentTarget
+            or getgenv().TargetPlayer
+            or getgenv().AutoBountyTarget
+
+        if typeof(target) == "Instance" and target:IsA("Player") then
+            targetLabel.Text = "TARGET : " .. target.Name
+        elseif type(target) == "string" then
+            targetLabel.Text = "TARGET : " .. target
+        end
+    end
+end)
+
+-- =====================================================
+-- ESP LOGIC (REAL TIME)
+-- =====================================================
 
 local ESP = {}
 
-local function createESP(player)
-    if player == LocalPlayer then return end
+local function addESP(plr)
+    if plr == LocalPlayer then return end
 
     local box = Drawing.new("Square")
     box.Color = cfg.ESP.Color
     box.Thickness = 2
     box.Filled = false
-    box.Visible = false
 
     local name = Drawing.new("Text")
     name.Color = cfg.ESP.Color
     name.Size = 16
     name.Center = true
     name.Outline = true
-    name.Visible = false
 
-    ESP[player] = {
-        Box = box,
-        Name = name
-    }
+    ESP[plr] = {box = box, name = name}
 end
 
-local function removeESP(player)
-    if ESP[player] then
-        for _, obj in pairs(ESP[player]) do
-            obj:Remove()
-        end
-        ESP[player] = nil
+local function removeESP(plr)
+    if ESP[plr] then
+        ESP[plr].box:Remove()
+        ESP[plr].name:Remove()
+        ESP[plr] = nil
     end
 end
 
--- INIT EXISTING PLAYERS
-for _, p in ipairs(Players:GetPlayers()) do
-    createESP(p)
-end
-
-Players.PlayerAdded:Connect(createESP)
+for _,p in ipairs(Players:GetPlayers()) do addESP(p) end
+Players.PlayerAdded:Connect(addESP)
 Players.PlayerRemoving:Connect(removeESP)
 
--- ESP UPDATE LOOP
 RunService.RenderStepped:Connect(function()
     if not cfg.ESP.Enable then return end
 
-    for player, esp in pairs(ESP) do
-        local char = player.Character
+    for plr,data in pairs(ESP) do
+        local char = plr.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChild("Humanoid")
 
         if hrp and hum and hum.Health > 0 then
-            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local pos, visible = Camera:WorldToViewportPoint(hrp.Position)
             local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-            if onScreen and dist <= cfg.ESP.MaxDistance then
-                local size = math.clamp(3000 / dist, 20, 200)
+            if visible and dist <= cfg.ESP.MaxDistance then
+                local size = math.clamp(3000/dist, 20, 200)
+                data.box.Size = Vector2.new(size, size*1.5)
+                data.box.Position = Vector2.new(pos.X-size/2, pos.Y-size)
+                data.box.Visible = cfg.ESP.ShowBox
 
-                esp.Box.Size = Vector2.new(size, size * 1.5)
-                esp.Box.Position = Vector2.new(pos.X - size / 2, pos.Y - size)
-                esp.Box.Visible = cfg.ESP.ShowBox
-
-                esp.Name.Text = player.Name
-                esp.Name.Position = Vector2.new(pos.X, pos.Y - size - 15)
-                esp.Name.Visible = cfg.ESP.ShowName
+                data.name.Text = plr.Name
+                data.name.Position = Vector2.new(pos.X, pos.Y-size-15)
+                data.name.Visible = cfg.ESP.ShowName
             else
-                esp.Box.Visible = false
-                esp.Name.Visible = false
+                data.box.Visible = false
+                data.name.Visible = false
             end
         else
-            esp.Box.Visible = false
-            esp.Name.Visible = false
+            data.box.Visible = false
+            data.name.Visible = false
         end
     end
 end)
