@@ -1,113 +1,149 @@
---// SERVICES
+
+if not getgenv().config then
+    warn("Config not found. Load config.lua first.")
+    return
+end
+
+local cfg = getgenv().config
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local lp = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
---// GLOBALS
-getgenv().targ = nil
-getgenv().Hunting = false
-getgenv().BountyEarned = 0
-local StartTime = os.time()
 
---// SAFE ZONE CHECK
-local SafeZones
-pcall(function()
-    SafeZones = workspace._WorldOrigin.SafeZones
-end)
 
-local function IsInSafeZone(char)
-    if not SafeZones or not char or not char:FindFirstChild("HumanoidRootPart") then
-        return false
+local gui = Instance.new("ScreenGui")
+gui.Name = "SCP_HUB"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local bg = Instance.new("Frame")
+bg.Parent = gui
+bg.Size = UDim2.fromScale(1, 1)
+bg.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+bg.BackgroundTransparency = 0.25
+bg.BorderSizePixel = 0
+
+-- TITLE
+local title = Instance.new("TextLabel")
+title.Parent = bg
+title.Size = UDim2.new(1, 0, 0, 90)
+title.Position = UDim2.new(0, 0, 0, 25)
+title.BackgroundTransparency = 1
+title.Text = "SCP HUB  -  AUTO BOUNTY HUNT"
+title.TextColor3 = Color3.fromRGB(255, 50, 50)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBlack
+
+-- TARGET
+local targetLabel = Instance.new("TextLabel")
+targetLabel.Parent = bg
+targetLabel.Size = UDim2.new(1, 0, 0, 70)
+targetLabel.Position = UDim2.new(0, 0, 0.30, 0)
+targetLabel.BackgroundTransparency = 1
+targetLabel.Text = "TARGET : NONE"
+targetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+targetLabel.TextScaled = true
+targetLabel.Font = Enum.Font.GothamBold
+
+-- BOUNTY
+local bountyLabel = Instance.new("TextLabel")
+bountyLabel.Parent = bg
+bountyLabel.Size = UDim2.new(1, 0, 0, 70)
+bountyLabel.Position = UDim2.new(0, 0, 0.40, 0)
+bountyLabel.BackgroundTransparency = 1
+bountyLabel.Text = "CURRENT BOUNTY : 0"
+bountyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+bountyLabel.TextScaled = true
+bountyLabel.Font = Enum.Font.GothamBold
+
+
+
+getgenv().SCP_UI = {
+    SetTarget = function(name)
+        targetLabel.Text = "TARGET : " .. tostring(name)
+    end,
+
+    SetBounty = function(amount)
+        bountyLabel.Text = "CURRENT BOUNTY : " .. tostring(amount)
     end
+}
 
-    for _, zone in pairs(SafeZones:GetChildren()) do
-        if zone:IsA("BasePart") then
-            if (zone.Position - char.HumanoidRootPart.Position).Magnitude < 350 then
-                return true
+
+
+local ESP = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+
+    local box = Drawing.new("Square")
+    box.Color = cfg.ESP.Color
+    box.Thickness = 2
+    box.Filled = false
+    box.Visible = false
+
+    local name = Drawing.new("Text")
+    name.Color = cfg.ESP.Color
+    name.Size = 16
+    name.Center = true
+    name.Outline = true
+    name.Visible = false
+
+    ESP[player] = {
+        Box = box,
+        Name = name
+    }
+end
+
+local function removeESP(player)
+    if ESP[player] then
+        for _, obj in pairs(ESP[player]) do
+            obj:Remove()
+        end
+        ESP[player] = nil
+    end
+end
+
+-- INIT EXISTING PLAYERS
+for _, p in ipairs(Players:GetPlayers()) do
+    createESP(p)
+end
+
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+
+-- ESP UPDATE LOOP
+RunService.RenderStepped:Connect(function()
+    if not cfg.ESP.Enable then return end
+
+    for player, esp in pairs(ESP) do
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+
+        if hrp and hum and hum.Health > 0 then
+            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+
+            if onScreen and dist <= cfg.ESP.MaxDistance then
+                local size = math.clamp(3000 / dist, 20, 200)
+
+                esp.Box.Size = Vector2.new(size, size * 1.5)
+                esp.Box.Position = Vector2.new(pos.X - size / 2, pos.Y - size)
+                esp.Box.Visible = cfg.ESP.ShowBox
+
+                esp.Name.Text = player.Name
+                esp.Name.Position = Vector2.new(pos.X, pos.Y - size - 15)
+                esp.Name.Visible = cfg.ESP.ShowName
+            else
+                esp.Box.Visible = false
+                esp.Name.Visible = false
             end
+        else
+            esp.Box.Visible = false
+            esp.Name.Visible = false
         end
     end
-    return false
-end
-
---// SKIP TARGET
-function skipTarget()
-    getgenv().targ = nil
-    getgenv().Hunting = false
-    task.wait(0.3)
-    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-end
-
---// ANTI SAFEZONE LOOP
-task.spawn(function()
-    while task.wait(1) do
-        if getgenv().targ and getgenv().targ.Character then
-            local char = getgenv().targ.Character
-
-            -- SafeZone detected
-            if IsInSafeZone(char) then
-                skipTarget()
-            end
-
-            -- PvP disabled
-            local gui = lp.PlayerGui:FindFirstChild("Main")
-            if gui and gui:FindFirstChild("PvpDisabled") and gui.PvpDisabled.Visible then
-                skipTarget()
-            end
-        end
-    end
-end)
-
---// GUI
-local GUI = Instance.new("ScreenGui")
-GUI.Name = "SCP_HUB_INFO"
-GUI.Parent = lp.PlayerGui
-
-local Frame = Instance.new("Frame", GUI)
-Frame.Size = UDim2.new(0, 330, 0, 190)
-Frame.Position = UDim2.new(0.02, 0, 0.35, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-Frame.BorderSizePixel = 0
-Frame.Active = true
-Frame.Draggable = true
-
-local UICorner = Instance.new("UICorner", Frame)
-UICorner.CornerRadius = UDim.new(0, 10)
-
-local function makeLabel(text, y, size, color)
-    local l = Instance.new("TextLabel", Frame)
-    l.Size = UDim2.new(1, -20, 0, size)
-    l.Position = UDim2.new(0, 10, 0, y)
-    l.BackgroundTransparency = 1
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.Font = Enum.Font.GothamBold
-    l.TextSize = size - 4
-    l.TextColor3 = color
-    l.Text = text
-    return l
-end
-
-local Title = makeLabel(" SCP HUB | AUTO BOUNTY", 12, 30, Color3.fromRGB(255,170,0))
-local TargetLabel = makeLabel("Target : None", 55, 24, Color3.fromRGB(230,230,230))
-local BountyLabel = makeLabel("Bounty Earned : 0", 85, 24, Color3.fromRGB(0,255,150))
-local TimeLabel = makeLabel("Time Hunting : 0s", 115, 24, Color3.fromRGB(180,180,180))
-local StatusLabel = makeLabel("Status : Searching...", 145, 22, Color3.fromRGB(255,100,100))
-
---// GUI UPDATE LOOP
-task.spawn(function()
-    while task.wait(1) do
-        TargetLabel.Text = "Target : " .. (getgenv().targ and getgenv().targ.Name or "None")
-        BountyLabel.Text = "Bounty Earned : " .. tostring(getgenv().BountyEarned)
-        TimeLabel.Text = "Time Hunting : " .. (os.time() - StartTime) .. "s"
-        StatusLabel.Text = getgenv().Hunting and "Status : Fighting" or "Status : Searching..."
-    end
-end)
-
-local OldBounty = lp.leaderstats.Bounty.Value
-lp.leaderstats.Bounty:GetPropertyChangedSignal("Value"):Connect(function()
-    local New = lp.leaderstats.Bounty.Value
-    if New > OldBounty then
-        getgenv().BountyEarned += (New - OldBounty)
-    end
-    OldBounty = New
 end)
