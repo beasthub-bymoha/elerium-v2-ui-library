@@ -1,6 +1,6 @@
 
 if not getgenv().config then
-    warn("Config missing")
+    warn("Config not loaded")
     return
 end
 
@@ -8,15 +8,24 @@ local cfg = getgenv().config
 
 -- SERVICES
 local Players = game:GetService("Players")
+local Teams = game:GetService("Teams")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local RS = game:GetService("ReplicatedStorage")
 
--- =====================================================
--- GUI
--- =====================================================
 
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+pcall(function()
+    if not LocalPlayer.Team or LocalPlayer.Team.Name ~= cfg.Team then
+        RS.Remotes.CommF_:InvokeServer("SetTeam", cfg.Team)
+    end
+end)
+
+repeat task.wait() until LocalPlayer.Team and LocalPlayer.Team.Name == cfg.Team
+
+
+
+local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
 gui.Name = "SCP_HUB"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
@@ -33,30 +42,27 @@ title.Position = UDim2.new(0,0,0,20)
 title.BackgroundTransparency = 1
 title.Text = "SCP HUB  -  AUTO BOUNTY HUNT"
 title.Font = Enum.Font.GothamBlack
-title.TextColor3 = Color3.fromRGB(255,50,50)
 title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(255,50,50)
 
 local targetLabel = Instance.new("TextLabel", bg)
 targetLabel.Size = UDim2.new(1,0,0,60)
 targetLabel.Position = UDim2.new(0,0,0.30,0)
 targetLabel.BackgroundTransparency = 1
 targetLabel.Font = Enum.Font.GothamBold
-targetLabel.TextColor3 = Color3.fromRGB(255,255,255)
 targetLabel.TextScaled = true
-targetLabel.Text = "TARGET : NONE"
+targetLabel.TextColor3 = Color3.fromRGB(255,255,255)
+targetLabel.Text = "TARGET : SEARCHING..."
 
 local bountyLabel = Instance.new("TextLabel", bg)
 bountyLabel.Size = UDim2.new(1,0,0,60)
 bountyLabel.Position = UDim2.new(0,0,0.40,0)
 bountyLabel.BackgroundTransparency = 1
 bountyLabel.Font = Enum.Font.GothamBold
-bountyLabel.TextColor3 = Color3.fromRGB(255,255,255)
 bountyLabel.TextScaled = true
+bountyLabel.TextColor3 = Color3.fromRGB(255,255,255)
 bountyLabel.Text = "CURRENT BOUNTY : 0"
 
--- =====================================================
--- AUTO UPDATE BOUNTY (REAL LOGIC)
--- =====================================================
 
 local function updateBounty()
     local stats = LocalPlayer:FindFirstChild("leaderstats")
@@ -66,35 +72,13 @@ local function updateBounty()
     end
 end
 
-if LocalPlayer:FindFirstChild("leaderstats") then
-    updateBounty()
-    LocalPlayer.leaderstats.ChildAdded:Connect(updateBounty)
-    LocalPlayer.leaderstats.ChildRemoved:Connect(updateBounty)
-end
-
--- =====================================================
--- AUTO TARGET DETECTION (SAFE)
--- =====================================================
--- Reads common globals if AutoBounty exposes them
-
 task.spawn(function()
     while task.wait(1) do
-        local target =
-            getgenv().CurrentTarget
-            or getgenv().TargetPlayer
-            or getgenv().AutoBountyTarget
-
-        if typeof(target) == "Instance" and target:IsA("Player") then
-            targetLabel.Text = "TARGET : " .. target.Name
-        elseif type(target) == "string" then
-            targetLabel.Text = "TARGET : " .. target
-        end
+        updateBounty()
     end
 end)
 
--- =====================================================
--- ESP LOGIC (REAL TIME)
--- =====================================================
+
 
 local ESP = {}
 
@@ -123,7 +107,7 @@ local function removeESP(plr)
     end
 end
 
-for _,p in ipairs(Players:GetPlayers()) do addESP(p) end
+for _,p in pairs(Players:GetPlayers()) do addESP(p) end
 Players.PlayerAdded:Connect(addESP)
 Players.PlayerRemoving:Connect(removeESP)
 
@@ -136,10 +120,10 @@ RunService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
 
         if hrp and hum and hum.Health > 0 then
-            local pos, visible = Camera:WorldToViewportPoint(hrp.Position)
+            local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
             local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-            if visible and dist <= cfg.ESP.MaxDistance then
+            if vis and dist <= cfg.ESP.MaxDistance then
                 local size = math.clamp(3000/dist, 20, 200)
                 data.box.Size = Vector2.new(size, size*1.5)
                 data.box.Position = Vector2.new(pos.X-size/2, pos.Y-size)
@@ -158,3 +142,8 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+
+loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/LumosSera/SeraHub/main/AutoBounty.lua"
+))()
