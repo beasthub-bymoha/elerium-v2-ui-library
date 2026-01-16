@@ -1,17 +1,4 @@
 
-
--- local sitink
-local sitinklib = loadstring(game:HttpGet("https://github.com/ErutTheTeru/uilibrary/blob/main/Sitink%20Lib/Source.lua?raw=true"))()
-local Notify = sitinklib:Notify({
-	["Title"] = SCP HUB (Kaitun) ",
-	["Description"] = "| Make by Qminh",
-	["Color"] = Color3.fromRGB(0,0,0, 146.00000649690628, 242.00000077486038),
-	["Content"] = "Load Success!",
-	["Time"] = 1,
-	["Delay"] = 10
-})
--- Main UI
-
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
