@@ -3,7 +3,7 @@
 -- local sitink
 local sitinklib = loadstring(game:HttpGet("https://github.com/ErutTheTeru/uilibrary/blob/main/Sitink%20Lib/Source.lua?raw=true"))()
 local Notify = sitinklib:Notify({
-	["Title"] = "Kenta Hub (Kaitun) ",
+	["Title"] = SCP HUB (Kaitun) ",
 	["Description"] = "| Make by Qminh",
 	["Color"] = Color3.fromRGB(0,0,0, 146.00000649690628, 242.00000077486038),
 	["Content"] = "Load Success!",
@@ -98,7 +98,7 @@ local icon = Instance.new("ImageLabel")
 icon.Size = UDim2.new(0, 64, 0, 64)
 icon.Position = UDim2.new(0.5, -32, 0, 16)
 icon.BackgroundTransparency = 1
-icon.Image = "rbxassetid://93951724347885 "
+icon.Image = "rbxassetid://135671141026630 "
 icon.Parent = uiContainer
 
 local title = Instance.new("TextLabel")
