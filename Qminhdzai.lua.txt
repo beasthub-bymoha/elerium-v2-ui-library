@@ -1,64 +1,152 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
-local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-local label = Instance.new("TextLabel", gui)
+pcall(function()
+    PlayerGui:FindFirstChild("SCP_HUB_GUI"):Destroy()
+end)
 
-label.Size = UDim2.new(0, 400, 0, 100)
-label.Position = UDim2.new(0.5, -200, 0.1, 0)
-label.BackgroundTransparency = 1
-label.TextScaled = true
-label.TextColor3 = Color3.fromRGB(255, 255, 0)
-label.Font = Enum.Font.GothamBold
-label.Text = "S C P HUB KAITUN"
-local remote, idremote
-for _, v in next, ({game.ReplicatedStorage.Util, game.ReplicatedStorage.Common, game.ReplicatedStorage.Remotes, game.ReplicatedStorage.Assets, game.ReplicatedStorage.FX}) do
-    for _, n in next, v:GetChildren() do
-        if n:IsA("RemoteEvent") and n:GetAttribute("Id") then
-            remote, idremote = n, n:GetAttribute("Id")
-        end
-    end
-    v.ChildAdded:Connect(function(n)
-        if n:IsA("RemoteEvent") and n:GetAttribute("Id") then
-            remote, idremote = n, n:GetAttribute("Id")
-        end
-    end)
-end
+-- ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "SCP_HUB_GUI"
+gui.Parent = PlayerGui
+gui.ResetOnSpawn = false
+
+-- Main Frame
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 440, 0, 270)
+frame.Position = UDim2.new(0.5, -220, 0.12, 0)
+frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+frame.BackgroundTransparency = 0.12
+frame.BorderSizePixel = 0
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 18)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(255, 200, 0)
+stroke.Thickness = 1.2
+stroke.Transparency = 0.25
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Position = UDim2.new(0, 20, 0, 14)
+title.Size = UDim2.new(1, -140, 0, 36)
+title.BackgroundTransparency = 1
+title.Text = "SCP HUB - KAITUN"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 26
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextColor3 = Color3.fromRGB(255, 220, 0)
+
+-- Status
+local status = Instance.new("TextLabel", frame)
+status.Position = UDim2.new(0, 20, 0, 54)
+status.Size = UDim2.new(1, -140, 0, 22)
+status.BackgroundTransparency = 1
+status.Text = "Status : Active"
+status.Font = Enum.Font.GothamMedium
+status.TextSize = 14
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.TextColor3 = Color3.fromRGB(0, 255, 120)
+
+-- Script Logo
+local scriptLogo = Instance.new("ImageLabel", frame)
+scriptLogo.Size = UDim2.new(0, 48, 0, 48)
+scriptLogo.Position = UDim2.new(1, -66, 0, 14)
+scriptLogo.BackgroundColor3 = Color3.fromRGB(25,25,25)
+scriptLogo.BackgroundTransparency = 0.3
+scriptLogo.Image = "rbxassetid://135671141026630"
+scriptLogo.BorderSizePixel = 0
+
+local logoCorner = Instance.new("UICorner", scriptLogo)
+logoCorner.CornerRadius = UDim.new(0, 10)
+
+-- Player PFP
+local pfp = Instance.new("ImageLabel", frame)
+pfp.Size = UDim2.new(0, 42, 0, 42)
+pfp.Position = UDim2.new(1, -63, 0, 70)
+pfp.BackgroundTransparency = 0.1
+
+local pfpCorner = Instance.new("UICorner", pfp)
+pfpCorner.CornerRadius = UDim.new(0, 10)
+
+local pfpStroke = Instance.new("UIStroke", pfp)
+pfpStroke.Color = Color3.fromRGB(255,255,255)
+pfpStroke.Transparency = 0.6
+pfpStroke.Thickness = 1
+
 task.spawn(function()
-    while task.wait(0.05) do
-        local char = game.Players.LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        local parts = {}
-        for _, x in ipairs({workspace.Enemies, workspace.Characters}) do
-            for _, v in ipairs(x and x:GetChildren() or {}) do
-                local hrp = v:FindFirstChild("HumanoidRootPart")
-                local hum = v:FindFirstChild("Humanoid")
-                if v ~= char and hrp and hum and hum.Health > 0 and (hrp.Position - root.Position).Magnitude <= 60 then
-                    for _, _v in ipairs(v:GetChildren()) do
-                        if _v:IsA("BasePart") and (hrp.Position - root.Position).Magnitude <= 60 then
-                            parts[#parts+1] = {v, _v}
-                        end
-                    end
-                end
-            end
-        end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if #parts > 0 and tool and (tool:GetAttribute("WeaponType") == "Melee" or tool:GetAttribute("WeaponType") == "Sword") then
-            pcall(function()
-                require(game.ReplicatedStorage.Modules.Net):RemoteEvent("RegisterHit", true)
-                game.ReplicatedStorage.Modules.Net["RE/RegisterAttack"]:FireServer()
-                local head = parts[1][1]:FindFirstChild("Head")
-                if not head then return end
-                game.ReplicatedStorage.Modules.Net["RE/RegisterHit"]:FireServer(head, parts, {}, tostring(game.Players.LocalPlayer.UserId):sub(2, 4) .. tostring(coroutine.running()):sub(11, 15))
-                cloneref(remote):FireServer(string.gsub("RE/RegisterHit", ".", function(c)
-                    return string.char(bit32.bxor(string.byte(c), math.floor(workspace:GetServerTimeNow() / 10 % 10) + 1))
-                end),
-                bit32.bxor(idremote + 909090, game.ReplicatedStorage.Modules.Net.seed:InvokeServer() * 2), head, parts)
-            end)
-        end
+    local thumb = Players:GetUserThumbnailAsync(
+        player.UserId,
+        Enum.ThumbnailType.HeadShot,
+        Enum.ThumbnailSize.Size420x420
+    )
+    pfp.Image = thumb
+end)
+
+-- Time Played
+local joinTime = tick()
+
+local timePlayed = Instance.new("TextLabel", frame)
+timePlayed.Position = UDim2.new(0, 20, 0, 110)
+timePlayed.Size = UDim2.new(1, -40, 0, 30)
+timePlayed.BackgroundTransparency = 1
+timePlayed.Text = "Time Played : 00:00:00"
+timePlayed.Font = Enum.Font.GothamSemibold
+timePlayed.TextSize = 18
+timePlayed.TextXAlignment = Enum.TextXAlignment.Center
+timePlayed.TextColor3 = Color3.fromRGB(255,255,255)
+
+task.spawn(function()
+    while task.wait(1) do
+        local elapsed = math.floor(tick() - joinTime)
+        local h = math.floor(elapsed / 3600)
+        local m = math.floor((elapsed % 3600) / 60)
+        local s = elapsed % 60
+
+        timePlayed.Text = string.format(
+            "Time Played : %02d:%02d:%02d",
+            h, m, s
+        )
     end
 end)
 
+-- Discord Button
+local discordBtn = Instance.new("TextButton", frame)
+discordBtn.Size = UDim2.new(0, 300, 0, 46)
+discordBtn.Position = UDim2.new(0.5, -150, 1, -66)
+discordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+discordBtn.BackgroundTransparency = 0.1
+discordBtn.Text = "   Copy Discord Link"
+discordBtn.Font = Enum.Font.GothamBold
+discordBtn.TextSize = 16
+discordBtn.TextColor3 = Color3.fromRGB(255,255,255)
+discordBtn.AutoButtonColor = true
 
+local btnCorner = Instance.new("UICorner", discordBtn)
+btnCorner.CornerRadius = UDim.new(0, 12)
+
+local discordIcon = Instance.new("ImageLabel", discordBtn)
+discordIcon.Size = UDim2.new(0, 24, 0, 24)
+discordIcon.Position = UDim2.new(0, 12, 0.5, -12)
+discordIcon.BackgroundTransparency = 1
+discordIcon.Image = "rbxassetid://80544958215233"
+
+-- Copy Discord
+local DISCORD_LINK = "https://discord.gg/nPdgRwWJje"
+
+discordBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(DISCORD_LINK)
+        discordBtn.Text = "   Copied ✔"
+        task.delay(1.2, function()
+            discordBtn.Text = "   Copy Discord Link"
+        end)
+    end
+end)
+
+-- main 
 -- Auto Kaitun
 spawn(function()
 		pcall(function()
