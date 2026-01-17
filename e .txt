@@ -3,10 +3,10 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 -- local window fluent
 local Window = Fluent:CreateWindow({
-    Title = "Kenta Hub",
-    SubTitle = " | By Qminhzz",
+    Title = " SCP HUB || BLOX FRUITS",
+    SubTitle = " - by moha",
     Search = true,
-    Icon = "rbxassetid://102521267728109",
+    Icon = "rbxassetid://135671141026630",
     TabWidth = 160,
     Size = UDim2.fromOffset(500,350),
     Acrylic = true,
