@@ -120,6 +120,7 @@ function autoblock()
         task.wait()
     end
     game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.B, false, game)
+  end
 end
 
 function autoagility()
@@ -447,16 +448,7 @@ end
 end)() end
 end
 })
-Tab:AddToggle({
-Name = "Auto Rebirth",
-Default = false,
-Save = true,
-Flag = "autorebirth_db",
-Callback = function(Value)
-getgenv().AutoRebirth = Value
-autorebirth()
-end
-})
+
 Tab:AddToggle({
 Name = "Auto Rebirth 2",
 Default = false,
