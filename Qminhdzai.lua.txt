@@ -872,42 +872,22 @@ local function CheckQuest()
     end
 end
 
-if _G.Level and MyLevel >= 2600 then
-    if not InSubmerged and not Traveling then
-        Traveling = true
+local DidTP = false
+local DidReset = false
 
-    
-        local SubNPC = CFrame.new(
-            -16269.7041,
-            25.2288494,
-            1373.65955
-        )
-
-        local tries = 0
-        repeat
-            task.wait(Sec)
-            _tp(SubNPC)
-            tries += 1
-        until (HumanoidRootPart.Position - SubNPC.Position).Magnitude <= 8 or tries > 20
-
-
-        pcall(function()
-            game:GetService("ReplicatedStorage")
-                .Modules.Net
-                :FindFirstChild("RF/SubmarineWorkerSpeak")
-                :InvokeServer("TravelToSubmergedIsl")
-        end)
-
-        
-        local start = tick()
-        repeat
-            task.wait(0.5)
-        until InSubmerged or tick() - start > 15
-
-        Traveling = false
-    end
+if _G.Level and MyLevel >= 2600 and not DidTP then
+    DidTP = true
+    _tp(CFrame.new(10882.264, -2086.322, 10034.226))
 end
 
+
+if DidTP and not DidReset then
+    DidReset = true
+    task.wait(0.5)
+    game.Players.LocalPlayer.Character.Humanoid.Health = 0
+end
+
+             
 function Hop()
     local PlaceID = game.PlaceId
     local AllIDs = {}
