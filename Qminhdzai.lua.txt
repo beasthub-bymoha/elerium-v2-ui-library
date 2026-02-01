@@ -828,7 +828,7 @@ local function CheckQuest()
 
     CFrameQuest = CFrame.new(10780, -2088, 9262)
     CFrameMon   = CFrame.new(10747, -2088, 9362)
-      elseif MyLevel >= 2650 and MyLevel <= 2699 then
+      elseif MyLevel >= 2650 or MyLevel <= 2800 then
     Mon = "Coral Pirate"
     LevelQuest = 2
     NameQuest = "SubmergedQuest1"
