@@ -347,9 +347,7 @@ task.spawn(function()
   end
 end)
 
--- ═══════════════════════════════════════════════════════════════
--- TWEEN / FLY TO POSITION (same pattern as REDZ HUB V2)
--- ═══════════════════════════════════════════════════════════════
+
 local function TweenToPosition(targetCFrame)
   local plrPP = Player.Character and Player.Character.PrimaryPart
   if not plrPP then return end
@@ -370,10 +368,7 @@ local function TweenToPosition(targetCFrame)
   tween.Completed:Wait()
 end
 
--- ═══════════════════════════════════════════════════════════════
--- FRUIT FINDER (same pattern as REDZ HUB V2's FruitFind)
--- Scans workspace for the nearest devil fruit
--- ═══════════════════════════════════════════════════════════════
+═
 local function FruitFind()
   local fruits = workspace:GetChildren()
   local FruitDistance = math.huge
@@ -398,10 +393,7 @@ local function FruitFind()
   return FoundFruit
 end
 
--- ═══════════════════════════════════════════════════════════════
--- FRUIT ESP (same pattern as REDZ HUB V2's AddESP)
--- Draws a red ESP marker on fruits in workspace
--- ═══════════════════════════════════════════════════════════════
+
 local function AddESP(Part, ESPColor)
   if Part and Part:FindFirstChild("ESP_FruitSniper") then return end
   
@@ -466,9 +458,7 @@ task.spawn(function()
   end
 end)
 
--- ═══════════════════════════════════════════════════════════════
--- CHECK IF FRUIT IS IN INVENTORY (backpack or character)
--- ═══════════════════════════════════════════════════════════════
+
 local function FindFruitInInventory()
   local plrChar = Player and Player.Character
   local plrBag  = Player and Player.Backpack
@@ -493,11 +483,7 @@ local function FindFruitInInventory()
   return nil
 end
 
--- ═══════════════════════════════════════════════════════════════
--- STORE FRUIT WITH 3 RETRIES (core feature)
--- Uses the same "StoreFruit" remote as REDZ HUB V2
--- Returns true if stored, false if all retries failed
--- ═══════════════════════════════════════════════════════════════
+
 local function StoreFruitWithRetry(fruitTool)
   local maxRetries = getgenv().StoreRetries or 3
   local fruitId = Get_Fruit(fruitTool.Name)
@@ -529,16 +515,10 @@ local function StoreFruitWithRetry(fruitTool)
   return false
 end
 
--- ═══════════════════════════════════════════════════════════════
--- SEA DETECTION
--- Blox Fruits uses sub-places for each sea. The PlaceId changes
--- depending on which sea you are in. Using game.PlaceId with
--- TeleportService:Teleport() guarantees you stay in the SAME sea.
--- ═══════════════════════════════════════════════════════════════
 local CurrentPlaceId = game.PlaceId
 local CurrentSea = "Unknown"
 
--- Old Place IDs (legacy, for reference)
+
 local OLD_SEA_IDS = {
   [2753915549] = "Sea 1",
   [4442272183] = "Sea 2",
@@ -574,20 +554,7 @@ end
 
 print("[FruitSniper] 🌊 Detected: " .. CurrentSea .. " (PlaceId: " .. CurrentPlaceId .. ")")
 
--- ═══════════════════════════════════════════════════════════════
--- SERVER HOP (BLOX FRUITS NATIVE METHOD)
--- 
--- WHY ERROR 773 HAPPENED:
---   Blox Fruits actually RESTRICTS standard Roblox client-side 
---   teleportation (TeleportService) to prevent exploiters from 
---   bypassing server limits or joining restricted instances.
---
--- THE REAL FIX:
---   Blox Fruits has a built-in "Server Browser" GUI. We must use
---   their internal RemoteFunction ("__ServerBrowser") to request
---   a teleport to the JobId. The game's server will validate it
---   and teleport us safely, completely bypassing Error 773!
--- ═══════════════════════════════════════════════════════════════
+
 local function ServerHop()
   Notify("🔄 Starting server hop loop...", "hop", true)
   
@@ -673,9 +640,6 @@ local function ServerHop()
   end
 end
 
--- ═══════════════════════════════════════════════════════════════
--- ANTI-AFK (same pattern as many exploit scripts)
--- ═══════════════════════════════════════════════════════════════
 task.spawn(function()
   while getgenv().AntiAFK do task.wait(60)
     pcall(function()
@@ -685,10 +649,7 @@ task.spawn(function()
   end
 end)
 
--- ═══════════════════════════════════════════════════════════════
--- CHARACTER RESPAWN HANDLER
--- Waits for character to fully load after death/respawn
--- ═══════════════════════════════════════════════════════════════
+
 local function WaitForCharacter()
   local char = Player.Character or Player.CharacterAdded:Wait()
   repeat task.wait()
@@ -698,11 +659,8 @@ local function WaitForCharacter()
   return char
 end
 
--- ═══════════════════════════════════════════════════════════════
--- ███  MAIN LOOP: SCAN → FLY → GRAB → STORE → HOP  ███
--- ═══════════════════════════════════════════════════════════════
 
--- Show startup success message
+
 Notify("✅ Script Successfully Executed!", "success", true)
 task.wait(0.5)
 Notify("🌊 Sea: " .. CurrentSea, "info")
@@ -716,31 +674,27 @@ task.wait(1)
 task.spawn(function()
   while getgenv().AutoFruitSniper do
     
-    -- Make sure we have a character
+    
     Notify("⏳ Waiting for character...", "info", true)
     WaitForCharacter()
     Notify("✅ Character loaded!", "success")
     
-    -- ─────────────────────────────────────────────────
-    -- PHASE 1: SCAN FOR FRUITS
-    -- ─────────────────────────────────────────────────
+
     Notify("🔍 Scanning for fruits...", "action", true)
     local fruit = FruitFind()
     
     if fruit then
-      -- A fruit exists in this server!
+  
       local fruitHandle = fruit:FindFirstChild("Handle")
       Notify("🍎 FRUIT FOUND: " .. fruit.Name, "fruit", true)
       Notify("📍 Location: " .. tostring(fruitHandle.Position), "fruit")
       task.wait(0.5)
       
-      -- ─────────────────────────────────────────────────
-      -- PHASE 2: FLY TO THE FRUIT
-      -- ─────────────────────────────────────────────────
+
       IsFarming = true
       Notify("✈️ Flying to " .. fruit.Name .. "...", "action", true)
       
-      -- Tween to slightly above the fruit, then down to it
+      
       local aboveFruit = CFrame.new(fruitHandle.Position + Vector3.new(0, 5, 0))
       TweenToPosition(aboveFruit)
       task.wait(0.3)
@@ -749,12 +703,10 @@ task.spawn(function()
       task.wait(0.5)
       Notify("✅ Arrived at fruit!", "success")
       
-      -- ─────────────────────────────────────────────────
-      -- PHASE 3: PICK UP THE FRUIT
-      -- ─────────────────────────────────────────────────
+
       Notify("🤚 Grabbing " .. fruit.Name .. "...", "action", true)
       
-      -- Touch the fruit by teleporting directly onto it
+    
       local plrPP = Player.Character and Player.Character.PrimaryPart
       if plrPP and fruitHandle then
         for i = 1, 10 do
