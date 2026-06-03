@@ -316,7 +316,7 @@ task.spawn(function()
             block.CFrame = plrPP.CFrame
           end
         end
-        -- No-clip: disable collision on all character parts
+        
         local plrChar = Player.Character
         if plrChar then
           for _, part in pairs(plrChar:GetChildren()) do
@@ -324,7 +324,7 @@ task.spawn(function()
               part.CanCollide = false
             end
           end
-          -- Clear stun/busy states so we can move freely
+          
           if plrChar:FindFirstChild("Stun") and plrChar.Stun.Value ~= 0 then
             plrChar.Stun.Value = 0
           end
@@ -333,7 +333,7 @@ task.spawn(function()
           end
         end
       else
-        -- Re-enable collisions when not farming
+      
         local plrChar = Player.Character
         if plrChar then
           for _, part in pairs(plrChar:GetChildren()) do
@@ -356,7 +356,7 @@ local function TweenToPosition(targetCFrame)
   local speed = getgenv().TweenSpeed or 300
   local tweenTime = distance / speed
   
-  -- Clamp minimum tween time
+  
   if tweenTime < 0.1 then tweenTime = 0.1 end
   
   local tween = TweenService:Create(
@@ -368,7 +368,7 @@ local function TweenToPosition(targetCFrame)
   tween.Completed:Wait()
 end
 
-═
+
 local function FruitFind()
   local fruits = workspace:GetChildren()
   local FruitDistance = math.huge
@@ -376,9 +376,9 @@ local function FruitFind()
   
   for _, fruit in pairs(fruits) do
     local plrPP = Player and Player.Character and Player.Character.PrimaryPart
-    -- Check 1: it's a Tool with a Handle (fruit on ground)
+    
     local isTool = fruit and fruit:IsA("Tool") and fruit:FindFirstChild("Handle")
-    -- Check 2: name contains "Fruit" with a Handle
+    
     local isFruitNamed = fruit and string.find(fruit.Name, "Fruit") and fruit:FindFirstChild("Handle")
     
     if plrPP and isTool and (plrPP.Position - isTool.Position).Magnitude <= FruitDistance then
@@ -441,7 +441,7 @@ local function RemoveESP(Part)
   end
 end
 
--- Fruit ESP loop
+
 task.spawn(function()
   while getgenv().AutoFruitSniper do task.wait(1)
     if getgenv().FruitESP then
@@ -463,7 +463,7 @@ local function FindFruitInInventory()
   local plrChar = Player and Player.Character
   local plrBag  = Player and Player.Backpack
   
-  -- Check character (equipped)
+  
   if plrChar then
     for _, tool in pairs(plrChar:GetChildren()) do
       if tool:IsA("Tool") and tool:FindFirstChild("Fruit") then
@@ -471,7 +471,7 @@ local function FindFruitInInventory()
       end
     end
   end
-  -- Check backpack
+  
   if plrBag then
     for _, tool in pairs(plrBag:GetChildren()) do
       if tool:IsA("Tool") and tool:FindFirstChild("Fruit") then
@@ -525,28 +525,27 @@ local OLD_SEA_IDS = {
   [7449423635] = "Sea 3"
 }
 
--- Try to detect sea from old IDs first
+
 if OLD_SEA_IDS[CurrentPlaceId] then
   CurrentSea = OLD_SEA_IDS[CurrentPlaceId]
 else
-  -- New/updated Place IDs — detect sea from in-game data
-  -- The game knows which sea you're in via workspace markers
+
   pcall(function()
     local Locations = workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("Locations")
     if Locations then
-      -- Check for Sea 3 unique islands
+      
       if Locations:FindFirstChild("Hydra Island") or Locations:FindFirstChild("Floating Turtle") or Locations:FindFirstChild("Castle on the Sea") then
         CurrentSea = "Sea 3"
-      -- Check for Sea 2 unique islands
+      
       elseif Locations:FindFirstChild("Kingdom of Rose") or Locations:FindFirstChild("Green Zone") or Locations:FindFirstChild("Graveyard") then
         CurrentSea = "Sea 2"
-      -- Otherwise it's Sea 1
+      
       else
         CurrentSea = "Sea 1"
       end
     end
   end)
-  -- Fallback: check PlaceId magnitude (new IDs are much larger numbers)
+  
   if CurrentSea == "Unknown" then
     CurrentSea = "Sea (ID: " .. CurrentPlaceId .. ")"
   end
@@ -558,7 +557,6 @@ print("[FruitSniper] 🌊 Detected: " .. CurrentSea .. " (PlaceId: " .. CurrentP
 local function ServerHop()
   Notify("🔄 Starting server hop loop...", "hop", true)
   
-  -- Queue script to auto-execute after teleport
   pcall(function()
     local queueteleport = (syn and syn.queue_on_teleport) 
       or queue_on_teleport 
@@ -569,11 +567,11 @@ local function ServerHop()
     end
   end)
   
-  -- Infinite retry loop
+  
   while true do
     Notify("🔍 Searching " .. CurrentSea .. " servers...", "hop")
     
-    -- We can use CurrentPlaceId because we are using the native ServerBrowser
+
     local apiUrl = "https://games.roblox.com/v1/games/" .. CurrentPlaceId .. "/servers/Public?sortOrder=Desc&excludeFullGames=true&limit=100"
     
     local function ListServers(cursor)
@@ -609,7 +607,7 @@ local function ServerHop()
       Notify("✈️ Teleporting via __ServerBrowser...", "success", true)
       
       local teleportSuccess, teleportErr = pcall(function()
-        -- THIS IS THE MAGIC FIX: Using Blox Fruits' own teleport remote!
+        
         return game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser"):InvokeServer("teleport", Server.id)
       end)
       
@@ -622,7 +620,7 @@ local function ServerHop()
         end)
         task.wait(5)
       else
-        -- Teleport triggered successfully
+        
         task.wait(15)
         Notify("⚠️ Still here? Retrying hop...", "warn", true)
       end
