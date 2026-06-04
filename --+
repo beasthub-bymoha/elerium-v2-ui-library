@@ -1,3 +1,4 @@
+local Team = getgenv().Config._GetTeam
 
 repeat task.wait() until game:IsLoaded()
 
