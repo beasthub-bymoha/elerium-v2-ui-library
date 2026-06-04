@@ -1,5 +1,7 @@
-local Team = getgenv().Config.Team
-print("Selected Team:", Team)
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(
+    "SetTeam",
+    getgenv().Config.Team
+)
 
 repeat task.wait() until game:IsLoaded()
 
