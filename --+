@@ -1,4 +1,5 @@
-local Team = getgenv().Config._GetTeam
+local Team = getgenv().Config.Team
+print("Selected Team:", Team)
 
 repeat task.wait() until game:IsLoaded()
 
